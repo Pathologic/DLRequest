@@ -9,7 +9,7 @@ class DLRequest {
     public function __construct($modx) {
         $this->modx = $modx;
         $this->params = $modx->event->params;
-        $this->rqParams = \jsonHelper::jsonDecode($modx->event->params['rqParams'], array('assoc' => true), true);
+        $this->rqParams = \jsonHelper::jsonDecode($this->params['rqParams'], array('assoc' => true), true);
     }
 
     public function getPassParams() {
@@ -27,7 +27,7 @@ class DLRequest {
     public function buildParamsForm() {
         $DLTemplate = \DLTemplate::getInstance($this->modx);
         $out = '';
-        $rqParamsNames = \jsonHelper::jsonDecode($modx->event->params['rqParamsNames'], array('assoc' => true), true);
+        $rqParamsNames = \jsonHelper::jsonDecode($this->params['rqParamsNames'], array('assoc' => true), true);
         if (!empty($this->rqParams)) {
             $groups = '';
             foreach ($this->rqParams as $paramName => $paramValues) {
