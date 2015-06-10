@@ -1,4 +1,7 @@
-<?php
+<?php namespace DLRequest;
+include_once (MODX_BASE_PATH.'assets/snippets/DocLister/lib/jsonHelper.class.php');
+include_once (MODX_BASE_PATH.'assets/snippets/DocLister/lib/DLTemplate.class.php');
+
 class DLRequest {
     protected $modx = null;
     public $params = array();
@@ -6,8 +9,7 @@ class DLRequest {
     public function __construct($modx) {
         $this->modx = $modx;
         $this->params = $modx->event->params;
-        $rqParams = $modx->event->params['rqParams'];
-        $this->rqParams = !empty($rqParams) ? json_decode($rqParams,true) : array();
+        $this->rqParams = \jsonHelper::jsonDecode($modx->event->params['rqParams'], array('assoc' => true), true);
     }
 
     public function getPassParams() {
@@ -23,11 +25,9 @@ class DLRequest {
     }
 
     public function buildParamsForm() {
-        include_once(MODX_BASE_PATH.'assets/snippets/DocLister/lib/DLTemplate.class.php');
-        $DLTemplate = DLTemplate::getInstance($this->modx);
+        $DLTemplate = \DLTemplate::getInstance($this->modx);
         $out = '';
-        $rqParamsNames = $this->params['rqParamsNames'];
-        $rqParamsNames = !empty($rqParamsNames) ? json_decode($rqParamsNames,true) : array();
+        $rqParamsNames = \jsonHelper::jsonDecode($modx->event->params['rqParamsNames'], array('assoc' => true), true);
         if (!empty($this->rqParams)) {
             $groups = '';
             foreach ($this->rqParams as $paramName => $paramValues) {
@@ -56,24 +56,38 @@ class DLRequest {
                 );
                 $groups .= $DLTemplate->parseChunk($owner,$tplPh);
             }
-            $keepParams = "";
-            $_keepParams = isset($this->params['keepParams']) ? explode(',',$this->params['keepParams']) : array();
-            if (isset($this->params['keepTpl'])) {
-                foreach ($_REQUEST as $key => $value) {
-                    if (in_array($key, $_keepParams)) {
-                        $tplPh = array(
-                            "paramName" => $key,
-                            "value"=>$value
-                        );
-                        $keepParams .= $DLTemplate->parseChunk($this->params['keepTpl'],$tplPh);
-                    }
-                }
-            }
+            $keepParams = isset($this->params['keepTpl']) ? $this->getKeepParams() : "";
             $tplPh = array(
                 "params"=>$groups,
                 "keepParams"=>$keepParams
             );
             $out = $DLTemplate->parseChunk($this->params['paramsOwnerTPL'],$tplPh);
+        }
+        return $out;
+    }
+
+    public function getKeepParams() {
+        $DLTemplate = \DLTemplate::getInstance($this->modx);
+        $_keepParams = isset($this->params['keepParams']) ? explode(',',$this->params['keepParams']) : array();
+        $out = "";
+        foreach ($_REQUEST as $key => $value) {
+            if (in_array($key, $_keepParams)) {
+                if (!is_array($_REQUEST[$key])) {
+                    $tplPh = array(
+                        "paramName" => $key,
+                        "value"=>$value
+                    );
+                    $out .= $DLTemplate->parseChunk($this->params['keepTpl'],$tplPh);
+                } else {
+                    foreach ($_REQUEST[$key] as $arrValue) {
+                        $tplPh = array(
+                            "paramName" => $key.'[]',
+                            "value"=>$arrValue
+                        );
+                        $out .= $DLTemplate->parseChunk($this->params['keepTpl'],$tplPh);
+                    }
+                }
+            }
         }
         return $out;
     }
